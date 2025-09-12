@@ -2,6 +2,13 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 import sqlite3
 from datetime import date
 
+import os
+
+if os.path.exists("erp.db"):
+    os.remove("erp.db")
+    print("⚠️ Base de datos eliminada y se regenerará desde schema.sql")
+
+
 DB_NAME = "mi_erp.db"
 app = Flask(__name__)
 app.secret_key = "tu_clave_supersecreta"  # Cambia esto por una clave más segura en producción
