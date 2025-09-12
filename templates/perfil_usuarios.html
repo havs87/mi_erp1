@@ -1,0 +1,159 @@
+{% extends "layout.html" %}
+{% block title %}Perfil de Usuarios{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Gestión de Usuarios</h1>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h4 class="mb-0">Usuarios registrados</h4>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario">
+    + Nuevo Usuario
+  </button>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped table-bordered align-middle text-center">
+    <thead class="table-dark">
+      <tr>
+        <th>ID</th>
+        <th>Usuario</th>
+        <th>Administrador</th>
+        <th>Pedidos</th>
+        <th>Movimientos</th>
+        <th>Administración</th>
+        <th>Usuarios</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in usuarios %}
+      <tr>
+        <td>{{ u.id }}</td>
+        <td>{{ u.username }}</td>
+        <td>{% if u.is_admin %}<span class="badge bg-success">Sí</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
+        <td>{% if u.mod_pedidos %}✅{% else %}❌{% endif %}</td>
+        <td>{% if u.mod_movimientos %}✅{% else %}❌{% endif %}</td>
+        <td>{% if u.mod_admin %}✅{% else %}❌{% endif %}</td>
+        <td>{% if u.mod_usuarios %}✅{% else %}❌{% endif %}</td>
+        <td class="d-flex gap-2 justify-content-center">
+          <!-- Botón editar -->
+          <button class="btn btn-sm btn-warning btnEditarUsuario"
+                  data-id="{{ u.id }}"
+                  data-username="{{ u.username }}"
+                  data-password="{{ u.password }}"
+                  data-admin="{{ u.is_admin }}"
+                  data-pedidos="{{ u.mod_pedidos }}"
+                  data-movimientos="{{ u.mod_movimientos }}"
+                  data-adminmod="{{ u.mod_admin }}"
+                  data-usuarios="{{ u.mod_usuarios }}"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalEditarUsuario">✏️</button>
+          <!-- Botón eliminar -->
+          <form method="POST" action="{{ url_for('eliminar_usuario', user_id=u.id) }}"
+                onsubmit="return confirm('¿Seguro que deseas eliminar este usuario?');">
+            <button type="submit" class="btn btn-sm btn-danger">X</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal Crear Usuario -->
+<div class="modal fade" id="modalNuevoUsuario" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('nuevo_usuario') }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Nuevo Usuario</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Usuario</label>
+            <input type="text" name="username" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Contraseña</label>
+            <input type="password" name="password" class="form-control" required>
+          </div>
+          <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" name="is_admin" id="checkAdminNuevo">
+            <label class="form-check-label" for="checkAdminNuevo">Administrador</label>
+          </div>
+          <label class="form-label">Permisos:</label>
+          <div class="d-flex flex-wrap gap-3">
+            <div><input type="checkbox" name="mod_pedidos" checked> Pedidos</div>
+            <div><input type="checkbox" name="mod_movimientos" checked> Movimientos</div>
+            <div><input type="checkbox" name="mod_admin"> Administración</div>
+            <div><input type="checkbox" name="mod_usuarios"> Usuarios</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Guardar</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar Usuario -->
+<div class="modal fade" id="modalEditarUsuario" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" id="formEditarUsuario">
+        <div class="modal-header">
+          <h5 class="modal-title">Editar Usuario</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Usuario</label>
+            <input type="text" name="username" id="editUsername" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Contraseña</label>
+            <input type="text" name="password" id="editPassword" class="form-control" required>
+          </div>
+          <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" name="is_admin" id="editAdmin">
+            <label class="form-check-label" for="editAdmin">Administrador</label>
+          </div>
+          <label class="form-label">Permisos:</label>
+          <div class="d-flex flex-wrap gap-3">
+            <div><input type="checkbox" name="mod_pedidos" id="editPedidos"> Pedidos</div>
+            <div><input type="checkbox" name="mod_movimientos" id="editMovimientos"> Movimientos</div>
+            <div><input type="checkbox" name="mod_admin" id="editAdminMod"> Administración</div>
+            <div><input type="checkbox" name="mod_usuarios" id="editUsuarios"> Usuarios</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Guardar cambios</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll('.btnEditarUsuario').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.id;
+      document.getElementById('formEditarUsuario').action = `/usuarios/editar/${id}`;
+      document.getElementById('editUsername').value = btn.dataset.username;
+      document.getElementById('editPassword').value = btn.dataset.password;
+      document.getElementById('editAdmin').checked = btn.dataset.admin == "1";
+      document.getElementById('editPedidos').checked = btn.dataset.pedidos == "1";
+      document.getElementById('editMovimientos').checked = btn.dataset.movimientos == "1";
+      document.getElementById('editAdminMod').checked = btn.dataset.adminmod == "1";
+      document.getElementById('editUsuarios').checked = btn.dataset.usuarios == "1";
+    });
+  });
+</script>
+{% endblock %}

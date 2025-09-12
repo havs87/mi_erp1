@@ -1,0 +1,256 @@
+{% extends "layout.html" %}
+{% block title %}Movimientos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>Movimientos</h1>
+</div>
+
+<!-- Formulario: nuevo movimiento -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <form action="{{ url_for('add_movimiento') }}" method="POST" class="row g-3" id="formNuevoMov">
+      <div class="col-12 col-md-2">
+        <label class="form-label">Tipo</label>
+        <select name="tipo" id="tipoSelect" class="form-select" required>
+          <option value="ingreso">Ingreso</option>
+          <option value="egreso">Egreso</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label">Categoría</label>
+        <select name="categoria" id="categoriaSelect" class="form-select" required>
+          <option value="">Seleccione...</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-2 d-flex align-items-end">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="usarSub" name="usar_subcategoria">
+          <label class="form-check-label" for="usarSub">Usar subcategoría</label>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label">Subcategoría</label>
+        <select name="subcategoria" id="subcategoriaSelect" class="form-select" disabled>
+          <option value="">—</option>
+        </select>
+      </div>
+
+      <div class="col-12 col-md-6">
+        <label class="form-label">Descripción</label>
+        <input type="text" name="descripcion" class="form-control" placeholder="Detalle del movimiento">
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label">Monto (S/.)</label>
+        <input type="number" step="0.01" name="monto" class="form-control" required>
+      </div>
+
+      <div class="col-12 col-md-3 d-flex align-items-end">
+        <button class="btn btn-success w-100">➕ Agregar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tabla de movimientos -->
+<div class="table-responsive">
+  <table class="table table-bordered table-hover align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>ID</th>
+        <th>Tipo</th>
+        <th>Categoría</th>
+        <th>Subcategoría</th>
+        <th>Descripción</th>
+        <th>Monto (S/.)</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in movimientos %}
+      <tr
+        data-id="{{ m['id'] }}"
+        data-tipo="{{ m['tipo'] }}"
+        data-cat-id="{{ m['categoria_id'] or '' }}"
+        data-subcat-id="{{ m['subcategoria_id'] or '' }}"
+      >
+        <td>{{ m['id'] }}</td>
+        <td class="text-capitalize">{{ m['tipo'] }}</td>
+        <td>
+          <span class="badge text-bg-primary">{{ m['categoria'] or '—' }}</span>
+          <button class="btn btn-link p-0 ms-2 editar-cats">cambiar</button>
+        </td>
+        <td><span class="badge text-bg-secondary">{{ m['subcategoria'] or '—' }}</span></td>
+        <td>{{ m['descripcion'] or '' }}</td>
+        <td>{{ m['monto'] or '' }}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-secondary editar-cats">Editar categoría</button>
+        </td>
+      </tr>
+
+      <!-- Fila desplegable para edición rápida -->
+      <tr class="edit-row d-none" id="edit-{{ m['id'] }}">
+        <td colspan="7">
+          <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-3">
+              <label class="form-label">Categoría</label>
+              <select class="form-select cat-select" data-mov-id="{{ m['id'] }}"></select>
+            </div>
+            <div class="col-12 col-md-3">
+              <label class="form-label">Subcategoría</label>
+              <select class="form-select subcat-select" data-mov-id="{{ m['id'] }}" disabled>
+                <option value="">—</option>
+              </select>
+            </div>
+            <div class="col-auto">
+              <button class="btn btn-primary guardar-cats" data-mov-id="{{ m['id'] }}">💾 Guardar</button>
+              <button class="btn btn-outline-secondary cancelar-cats" data-mov-id="{{ m['id'] }}">Cancelar</button>
+            </div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ----------------- Helpers fetch -----------------
+async function getJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error("Error " + r.status);
+  return r.json();
+}
+
+// ----------------- Carga dinámica (form nuevo) -----------------
+const tipoSelect = document.getElementById('tipoSelect');
+const categoriaSelect = document.getElementById('categoriaSelect');
+const subcategoriaSelect = document.getElementById('subcategoriaSelect');
+const usarSub = document.getElementById('usarSub');
+
+async function cargarCategoriasPorTipo(tipo, selectEl, selectedId) {
+  selectEl.innerHTML = '<option value="">Seleccione...</option>';
+  const data = await getJSON(`/api/categorias/${tipo}`);
+  data.forEach(([id, nombre]) => {
+    const opt = document.createElement('option');
+    opt.value = id; opt.textContent = nombre;
+    if (selectedId && String(selectedId) === String(id)) opt.selected = true;
+    selectEl.appendChild(opt);
+  });
+}
+
+async function cargarSubcategorias(categoriaId, selectEl, selectedId) {
+  selectEl.innerHTML = '<option value="">—</option>';
+  if (!categoriaId) { selectEl.disabled = true; return; }
+  const data = await getJSON(`/api/subcategorias/${categoriaId}`);
+  data.forEach(([id, nombre]) => {
+    const opt = document.createElement('option');
+    opt.value = id; opt.textContent = nombre;
+    if (selectedId && String(selectedId) === String(id)) opt.selected = true;
+    selectEl.appendChild(opt);
+  });
+  selectEl.disabled = false;
+}
+
+// Al cargar la página: categorías para 'ingreso' por defecto
+cargarCategoriasPorTipo(tipoSelect.value, categoriaSelect);
+
+// Cambios en tipo/categoría (form nuevo)
+tipoSelect.addEventListener('change', () => {
+  cargarCategoriasPorTipo(tipoSelect.value, categoriaSelect);
+  subcategoriaSelect.innerHTML = '<option value="">—</option>';
+  subcategoriaSelect.disabled = true;
+});
+
+categoriaSelect.addEventListener('change', () => {
+  if (usarSub.checked) {
+    cargarSubcategorias(categoriaSelect.value, subcategoriaSelect);
+  }
+});
+
+usarSub.addEventListener('change', () => {
+  if (usarSub.checked) {
+    cargarSubcategorias(categoriaSelect.value, subcategoriaSelect);
+  } else {
+    subcategoriaSelect.value = '';
+    subcategoriaSelect.disabled = true;
+  }
+});
+
+// ----------------- Edición rápida por fila -----------------
+document.addEventListener('click', async (e) => {
+  // Abrir editor
+  if (e.target.classList.contains('editar-cats')) {
+    const tr = e.target.closest('tr');
+    const id = tr.dataset.id;
+    const tipo = tr.dataset.tipo;
+    const catId = tr.dataset.catId || '';
+    const subcatId = tr.dataset.subcatId || '';
+
+    const editor = document.getElementById(`edit-${id}`);
+    editor.classList.remove('d-none');
+
+    const catSelect = editor.querySelector('.cat-select');
+    const subSelect = editor.querySelector('.subcat-select');
+
+    // Carga categorías del tipo del movimiento
+    await cargarCategoriasPorTipo(tipo, catSelect, catId);
+    // Carga subcategorías de la categoría actual (si existe)
+    if (catId) await cargarSubcategorias(catId, subSelect, subcatId);
+    else { subSelect.innerHTML = '<option value="">—</option>'; subSelect.disabled = true; }
+  }
+
+  // Cambio de categoría dentro del editor: recargar subcategorías
+  if (e.target.classList.contains('cat-select')) {
+    const catId = e.target.value;
+    const editor = e.target.closest('.edit-row');
+    const subSelect = editor.querySelector('.subcat-select');
+    await cargarSubcategorias(catId, subSelect);
+  }
+
+  // Guardar edición
+  if (e.target.classList.contains('guardar-cats')) {
+    const id = e.target.dataset.movId;
+    const editor = document.getElementById(`edit-${id}`);
+    const catSelect = editor.querySelector('.cat-select');
+    const subSelect = editor.querySelector('.subcat-select');
+
+    const formData = new FormData();
+    formData.append('id', id);
+    if (catSelect.value) formData.append('categoria_id', catSelect.value);
+    if (subSelect.value) formData.append('subcategoria_id', subSelect.value);
+
+    const r = await fetch('/update_movimiento', { method: 'POST', body: formData });
+    if (r.ok) {
+      // Actualiza textos en la fila principal
+      const tr = document.querySelector(`tr[data-id="${id}"]`);
+      // Buscar nombres legibles de las opciones seleccionadas
+      const catText = catSelect.options[catSelect.selectedIndex]?.text || '—';
+      const subText = subSelect.options[subSelect.selectedIndex]?.text || '—';
+      tr.querySelector('td:nth-child(3) .badge').textContent = catText;
+      tr.querySelector('td:nth-child(4) .badge').textContent = subText;
+
+      // Actualiza data attributes
+      tr.dataset.catId = catSelect.value || '';
+      tr.dataset.subcatId = subSelect.value || '';
+
+      editor.classList.add('d-none');
+    } else {
+      alert('Error al actualizar. Intenta nuevamente.');
+    }
+  }
+
+  // Cancelar edición
+  if (e.target.classList.contains('cancelar-cats')) {
+    const id = e.target.dataset.movId;
+    document.getElementById(`edit-${id}`).classList.add('d-none');
+  }
+});
+</script>
+{% endblock %}

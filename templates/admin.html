@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+{% block title %}Administración{% endblock %}
+{% block content %}
+<h1 class="mb-4">Administración</h1>
+
+<div class="alert alert-info d-flex justify-content-between align-items-center" role="alert">
+  <div class="fw-semibold">Efectivo en caja (no depositado):</div>
+  <div>
+    <span class="me-3">S/. {{ '%.2f' % (efectivo_pen or 0) }}</span>
+    <span>US$ {{ '%.2f' % (efectivo_usd or 0) }}</span>
+  </div>
+</div>
+
+<p class="text-muted">Aquí iremos agregando más paneles y reportes.</p>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">Dashboard</h2>
+  <div class="row">
+
+    {% if session.get('mod_pedidos') %}
+    <div class="col-md-3 mb-3">
+      <div class="card h-100">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">Gestión de Pedidos</h5>
+          <p class="card-text">Administra y controla tus pedidos.</p>
+          <a href="{{ url_for('pedidos_list') }}" class="btn btn-primary mt-auto">Ir a Pedidos</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if session.get('mod_movimientos') %}
+    <div class="col-md-3 mb-3">
+      <div class="card h-100">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">Movimientos</h5>
+          <p class="card-text">Control de ingresos y egresos.</p>
+          <a href="{{ url_for('movimientos_list') }}" class="btn btn-success mt-auto">Ir a Movimientos</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if session.get('mod_admin') %}
+    <div class="col-md-3 mb-3">
+      <div class="card h-100">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">Administración</h5>
+          <p class="card-text">Resumen de caja y gestión administrativa.</p>
+          <a href="{{ url_for('administracion_panel') }}" class="btn btn-warning mt-auto">Ir a Administración</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if session.get('mod_usuarios') %}
+    <div class="col-md-3 mb-3">
+      <div class="card h-100">
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">Perfiles de Usuarios</h5>
+          <p class="card-text">Crea y gestiona permisos de los usuarios.</p>
+          <a href="{{ url_for('perfil_usuarios') }}" class="btn btn-secondary mt-auto">Ir a Perfiles</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

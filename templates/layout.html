@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <title>Mini ERP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.bootstrap5.min.css" rel="stylesheet">
+  </head>
+  <body>
+    
+    <!-- ✅ NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="{{ url_for('dashboard') }}">Mini ERP</a>
+        <div class="collapse navbar-collapse">
+          <ul class="navbar-nav me-auto">
+            {% if session.get('mod_pedidos') %}
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('pedidos_list') }}">Pedidos</a></li>
+            {% endif %}
+            {% if session.get('mod_movimientos') %}
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('movimientos_list') }}">Movimientos</a></li>
+            {% endif %}
+            {% if session.get('mod_admin') %}
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('administracion_panel') }}">Administración</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('perfil_usuarios') }}">Perfil de Usuarios</a></li>
+            {% endif %}
+          </ul>
+          <a href="{{ url_for('logout') }}" class="btn btn-outline-light">Salir</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ✅ CONTENIDO -->
+    <div class="container mt-4">
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- Bootstrap Bundle con Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- jQuery (necesario para DataTables) -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <!-- DataTables JS -->
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

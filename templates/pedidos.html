@@ -1,0 +1,397 @@
+{% extends "layout.html" %}
+
+{% block title %}Gestión de Pedidos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>Gestión de Pedidos</h1>
+  <div class="d-flex gap-2">
+    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalNuevoPedido">Cargar Pedido</button>
+  </div>
+</div>
+
+{% if err %}
+<div class="alert alert-warning alert-dismissible fade show" role="alert">
+  {{ err }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+</div>
+{% endif %}
+
+<!-- Resumen solo de EFECTIVO (ingresos no depositados) -->
+<div class="alert alert-info d-flex justify-content-between align-items-center" role="alert">
+  <div class="fw-semibold">Efectivo en caja (no depositado):</div>
+  <div>
+    <span class="me-3">S/. {{ '%.2f' % (efectivo_pen or 0) }}</span>
+    <span>US$ {{ '%.2f' % (efectivo_usd or 0) }}</span>
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table id="tablaPedidos" class="table table-bordered table-hover align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>Etapa</th>
+        <th># Pedido</th>
+        <th>Fecha</th>
+        <th>F. Entrega Propuesta</th>
+        <th>F. Entrega Real</th>
+        <th>Días</th>
+        <th>Motivo del retraso</th>
+        <th>Canal de Recepción</th>
+        <th>O.C.</th>
+        <th>Doc. Venta</th>
+        <th>Cliente</th>
+        <th>Descripción del trabajo</th>
+        <th>Importe</th>
+        <th>Gasto</th>
+        <th>Ingreso</th>
+        <th>Ingreso Neto</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pedido in pedidos %}
+      <tr data-id="{{ pedido.id }}">
+        <td>{{ pedido.etapa }}</td>
+        <td>{{ pedido.numero_pedido }}</td>
+        <td>{{ pedido.fecha }}</td>
+        <td>{{ pedido.fecha_entrega_propuesta or '' }}</td>
+        <td>{{ pedido.fecha_entrega_real or '' }}</td>
+        <td>
+          {% if pedido.dias is not none %}
+            {{ pedido.dias }} días
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>{{ pedido.motivo_retraso or '' }}</td>
+        <td>{{ pedido.canal or '' }}</td>
+        <td>{{ pedido.oc or '' }}</td>
+        <td>{{ pedido.doc_venta or '' }}</td>
+        <td>{{ pedido.cliente or '' }}</td>
+        <td>{{ pedido.descripcion or '' }}</td>
+
+        <!-- Importe con moneda -->
+        <td>
+          {% set simbolo = 'S/.' if (pedido.moneda or 'PEN') == 'PEN' else 'US$' %}
+          {{ simbolo }} {{ '%.2f' % (pedido.importe or 0) }}
+        </td>
+
+        <td>{{ pedido.gasto or 0 }}</td>
+
+        <!-- Ingresos con dropdown -->
+        <td>
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              {{ simbolo }} {{ '%.2f' % (pedido.total_ingresos or 0) }}
+            </button>
+            <div class="dropdown-menu p-2" style="min-width:360px;">
+              <div class="fw-semibold mb-2">Ingresos del pedido</div>
+              {% if ingresos[pedido.id] %}
+                <div class="table-responsive">
+                  <table class="table table-sm table-bordered mb-0 align-middle">
+                    <thead>
+                      <tr>
+                        <th class="text-center align-middle" style="width: 2.5rem;">Caja</th>
+                        <th class="text-center align-middle">Fecha</th>
+                        <th class="text-center align-middle">Forma de Pago</th>
+                        <th class="text-center align-middle text-end">Importe</th>
+                        <th class="text-center align-middle" style="width: 3rem;">Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for ing in ingresos[pedido.id] %}
+                      <tr>
+                        <td class="text-center align-middle">
+                          <!-- Checkbox que marca si está depositado -->
+                          <input type="checkbox"
+                                class="form-check-input chkDepositado"
+                                data-id="{{ ing.id }}"
+                                {% if ing.depositado %}checked{% endif %}>
+                        </td>
+                        <td class="text-center align-middle">{{ ing.fecha or '' }}</td>
+                        <td class="text-center align-middle">{{ ing.f_pago or '' }}</td>
+                        <td class="text-end align-middle">{{ simbolo }} {{ '%.2f' % (ing.monto or 0) }}</td>
+                        <td class="text-center align-middle">
+                          <!-- Botón eliminar ingreso -->
+                          <button type="button"
+                                  class="btn btn-sm btn-danger btnEliminarIngreso"
+                                  data-id="{{ ing.id }}">
+                            X
+                          </button>
+                        </td>
+                      </tr>
+                      <tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <div class="text-muted">Sin ingresos cargados.</div>
+              {% endif %}
+            </div>
+          </div>
+        </td>
+
+        <td>{{ (pedido.total_ingresos or 0) - (pedido.gasto or 0) }}</td>
+
+        <td>
+          <button class="btn btn-sm btn-success btnIngresoFila"
+                  data-bs-toggle="modal"
+                  data-bs-target="#modalNuevoIngreso"
+                  data-id="{{ pedido.id }}">
+            Cargar Ingreso
+          </button>
+          <button class="btn btn-warning btn-sm" data-bs-toggle="modal"
+                  data-bs-target="#modalEditarPedido{{ pedido.id }}">
+            <i class="bi bi-pencil-square"></i>
+          </button>
+          <form method="POST" action="{{ url_for('eliminar_pedido', pedido_id=pedido.id) }}"
+                style="display:inline;"
+                onsubmit="return confirm('¿Seguro que deseas eliminar este pedido?')">
+            <button type="submit" class="btn btn-danger btn-sm">X</button>
+          </form>
+        </td>
+      </tr>
+
+      <!-- Modal Editar Pedido -->
+      <div class="modal fade" id="modalEditarPedido{{ pedido.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="{{ url_for('api_editar_pedido', pedido_id=pedido.id) }}">
+              <div class="modal-header">
+                <h5 class="modal-title">Editar Pedido #{{ pedido.numero_pedido }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label>Cliente</label>
+                  <input type="text" name="cliente" value="{{ pedido.cliente }}" class="form-control">
+                </div>
+                <div class="mb-3">
+                  <label>Descripción</label>
+                  <input type="text" name="descripcion" value="{{ pedido.descripcion }}" class="form-control">
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal Cargar Pedido -->
+<div class="modal fade" id="modalNuevoPedido" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="{{ url_for('nuevo_pedido') }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Cargar Pedido</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Fecha</label>
+            <input type="date" name="fecha" class="form-control" value="{{ today }}" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label"># Pedido</label>
+            <input type="text" name="numero_pedido" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">F. Entrega Propuesta</label>
+            <input type="date" name="fecha_entrega_propuesta" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Cliente</label>
+            <input type="text" name="cliente" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label d-block">Importe</label>
+            <div class="input-group">
+              <input type="number" step="0.01" name="importe" class="form-control" placeholder="0.00">
+              <input type="hidden" name="moneda" id="monedaInput" value="PEN">
+              <button class="btn btn-outline-primary btn-sm" type="button" id="btnSoles">Soles</button>
+              <button class="btn btn-outline-secondary btn-sm" type="button" id="btnDolares">Dólares</button>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Descripción del trabajo</label>
+            <textarea name="descripcion" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Canal de Recepción</label>
+            <input type="text" name="canal" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">O.C.</label>
+            <input type="text" name="oc" class="form-control">
+          </div>
+          <p class="text-muted mb-0"><small>El estado se asigna automáticamente como <strong>P. Generado</strong>.</small></p>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Guardar</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Cargar Ingreso -->
+<div class="modal fade" id="modalNuevoIngreso" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formIngreso" method="POST" action="{{ url_for('api_nuevo_ingreso') }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Cargar Ingreso de Pedido</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="pedido_id" id="ingresoNumeroPedido">
+          <div class="mb-3">
+            <label>Monto</label>
+            <input type="number" step="0.01" class="form-control" name="monto" required>
+          </div>
+          <div class="mb-3">
+            <label>Forma de Pago</label>
+            <input type="text" class="form-control" name="forma_pago">
+          </div>
+          <div class="mb-3">
+            <label>Fecha</label>
+            <input type="date" class="form-control" name="fecha" value="{{ today }}">
+          </div>
+          <div id="ingresoError" class="text-danger small"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Guardar Ingreso</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Prefill modal de ingreso
+  document.querySelectorAll('.btnIngresoFila').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pid = btn.dataset.id;
+      document.getElementById('ingresoNumeroPedido').value = pid;
+      document.getElementById('ingresoError').textContent = '';
+    });
+  });
+
+  (() => {
+  // --- Eliminar ingreso (delegación de eventos) ---
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btnEliminarIngreso');
+    if (!btn) return;
+
+    e.preventDefault();
+    const id = btn.dataset.id;
+    if (!id) return;
+
+    if (!confirm('¿Seguro que deseas eliminar este ingreso?')) return;
+
+    btn.disabled = true;
+    try {
+      // Construimos la URL usando url_for como plantilla, y sustituimos el ID
+      const url = "{{ url_for('eliminar_ingreso', ingreso_id=0) }}".replace('0', id);
+      const resp = await fetch(url, { method: 'POST' });
+      const data = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !data.ok) {
+        alert(data.error || 'No se pudo eliminar');
+      } else {
+        location.reload(); // refresca totales y lista
+      }
+    } catch (err) {
+      alert('Error de red. Intente nuevamente.');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // --- Toggle depositado/efectivo (delegación de eventos) ---
+  document.addEventListener('change', async (e) => {
+    const chk = e.target.closest('.chkDepositado');
+    if (!chk) return;
+
+    const id = chk.dataset.id;
+    const valor = chk.checked ? 1 : 0;
+
+    chk.disabled = true;
+    try {
+      const resp = await fetch("{{ url_for('api_toggle_ingreso') }}", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ ingreso_id: id, valor })
+      });
+      const data = await resp.json().catch(() => ({}));
+
+      if (!resp.ok || !data.ok) {
+        alert(data.error || 'No se pudo actualizar el estado');
+        chk.checked = !chk.checked; // revertir si falló
+      } else {
+        location.reload(); // actualiza resumen de caja y totales
+      }
+    } catch (err) {
+      alert('Error de red. Intente nuevamente.');
+      chk.checked = !chk.checked; // revertir
+    } finally {
+      chk.disabled = false;
+    }
+  });
+})();
+
+  // Guardar ingreso AJAX
+  const formIngreso = document.getElementById('formIngreso');
+  if (formIngreso) {
+    formIngreso.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errBox = document.getElementById('ingresoError');
+      errBox.textContent = '';
+      try {
+        const formData = new FormData(formIngreso);
+        const resp = await fetch("{{ url_for('api_nuevo_ingreso') }}", { method:"POST", body: formData });
+        const data = await resp.json().catch(()=>({}));
+        if (!resp.ok || !data.ok) {
+          errBox.textContent = data.error || 'Error al guardar ingreso';
+          return;
+        }
+        bootstrap.Modal.getInstance(document.getElementById('modalNuevoIngreso')).hide();
+        location.reload();
+      } catch {
+        errBox.textContent = 'Error de red';
+      }
+    });
+  }
+
+  // Toggle moneda
+  const btnSoles = document.getElementById('btnSoles');
+  const btnDolares = document.getElementById('btnDolares');
+  const monedaInput = document.getElementById('monedaInput');
+  if (btnSoles && btnDolares && monedaInput) {
+    function activarSoles() {
+      monedaInput.value = 'PEN';
+      btnSoles.classList.replace('btn-outline-primary','btn-primary');
+      btnDolares.classList.replace('btn-primary','btn-outline-secondary');
+    }
+    function activarDolares() {
+      monedaInput.value = 'USD';
+      btnDolares.classList.replace('btn-outline-secondary','btn-primary');
+      btnSoles.classList.replace('btn-primary','btn-outline-primary');
+    }
+    btnSoles.addEventListener('click', activarSoles);
+    btnDolares.addEventListener('click', activarDolares);
+    activarSoles();
+  }
+</script>
+{% endblock %}

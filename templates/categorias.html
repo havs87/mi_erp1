@@ -1,0 +1,96 @@
+{% extends "layout.html" %}
+{% block title %}Categorías y Subcategorías{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Categorías y Subcategorías</h1>
+<a href="{{ url_for('dashboard') }}" class="btn btn-secondary mb-3">← Volver al Dashboard</a>
+
+<div class="row">
+  <div class="col-md-6">
+    <h4>Categorías</h4>
+    <form method="POST" action="{{ url_for('nueva_categoria') }}" class="d-flex mb-3 gap-2">
+      <input type="text" name="nombre" class="form-control" placeholder="Nueva categoría" required>
+      <select name="tipo" class="form-select">
+        <option value="ingreso">Ingreso</option>
+        <option value="egreso">Egreso</option>
+      </select>
+      <button type="submit" class="btn btn-success">+</button>
+    </form>
+
+    <table class="table table-bordered">
+      <thead class="table-dark">
+        <tr><th>ID</th><th>Nombre</th><th>Tipo</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        {% for c in categorias %}
+        <tr>
+          <td>{{ c.id }}</td>
+          <td>{{ c.nombre }}</td>
+          <td>{{ c.tipo }}</td>
+          <td>
+            <!-- Editar -->
+            <form method="POST" action="{{ url_for('editar_categoria', cat_id=c.id) }}" class="d-inline">
+              <input type="text" name="nombre" value="{{ c.nombre }}" required>
+              <select name="tipo">
+                <option value="ingreso" {% if c.tipo=='ingreso' %}selected{% endif %}>Ingreso</option>
+                <option value="egreso" {% if c.tipo=='egreso' %}selected{% endif %}>Egreso</option>
+              </select>
+              <button class="btn btn-sm btn-warning">✏️</button>
+            </form>
+            <!-- Eliminar -->
+            <form method="POST" action="{{ url_for('eliminar_categoria', cat_id=c.id) }}" class="d-inline"
+                  onsubmit="return confirm('¿Eliminar categoría?');">
+              <button class="btn btn-sm btn-danger">X</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="col-md-6">
+    <h4>Subcategorías</h4>
+    <form method="POST" action="{{ url_for('nueva_subcategoria') }}" class="d-flex mb-3 gap-2">
+      <input type="text" name="nombre" class="form-control" placeholder="Nueva subcategoría" required>
+      <select name="categoria_id" class="form-select">
+        {% for c in categorias %}
+        <option value="{{ c.id }}">{{ c.nombre }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-success">+</button>
+    </form>
+
+    <table class="table table-bordered">
+      <thead class="table-dark">
+        <tr><th>ID</th><th>Subcategoría</th><th>Categoría</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        {% for s in subcategorias %}
+        <tr>
+          <td>{{ s.id }}</td>
+          <td>{{ s.nombre }}</td>
+          <td>
+            {% for c in categorias %}
+              {% if c.id == s.categoria_id %}{{ c.nombre }}{% endif %}
+            {% endfor %}
+          </td>
+          <td>
+            <!-- Editar -->
+            <form method="POST" action="{{ url_for('editar_subcategoria', sub_id=s.id) }}" class="d-inline">
+              <input type="text" name="nombre" value="{{ s.nombre }}" required>
+              <button class="btn btn-sm btn-warning">✏️</button>
+            </form>
+            <!-- Eliminar -->
+            <form method="POST" action="{{ url_for('eliminar_subcategoria', sub_id=s.id) }}" class="d-inline"
+                  onsubmit="return confirm('¿Eliminar subcategoría?');">
+              <button class="btn btn-sm btn-danger">X</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
