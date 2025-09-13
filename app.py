@@ -8,127 +8,20 @@ DB_NAME = "mi_erp.db"
 # ⚠️ Solo para pruebas en Render: borra la base cada vez que arranca
 if os.path.exists(DB_NAME):
     os.remove(DB_NAME)
-    print("⚠️ Base de datos eliminada y se regenerará desde schema.sql")
+    print("⚠️ Base de datos eliminada, se regenerará desde schema.sql")
 
 app = Flask(__name__)
 app.secret_key = "tu_clave_supersecreta"  # Cambia esto por una clave más segura en producción
 
-# -------------------- INIT DB (crea tablas y siembra ejemplos) --------------------
+# -------------------- INIT DB (crea tablas desde schema.sql) --------------------
 def init_db():
     with sqlite3.connect(DB_NAME) as conn:
-        c = conn.cursor()
         with open("schema.sql", "r") as f:
             conn.executescript(f.read())
     print("✅ Base de datos inicializada con schema.sql")
 
-# Inicializar DB al arrancar
+# Ejecutar inicialización
 init_db()
-
-    # 1) USUARIOS (estructura mínima; columnas extra se añaden con ensure_user_columns)
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS usuarios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE
-        )
-    """)
-
-    # 2) CATEGORIAS
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS categorias (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tipo TEXT NOT NULL,      -- 'ingreso' o 'egreso'
-            nombre TEXT NOT NULL
-        )
-    """)
-
-    # 3) SUBCATEGORIAS
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS subcategorias (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            categoria_id INTEGER NOT NULL,
-            nombre TEXT NOT NULL,
-            FOREIGN KEY(categoria_id) REFERENCES categorias(id)
-        )
-    """)
-
-    # 4) MOVIMIENTOS
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS movimientos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tipo TEXT NOT NULL,                -- 'ingreso' o 'egreso'
-            categoria_id INTEGER,
-            subcategoria_id INTEGER,
-            descripcion TEXT,
-            monto REAL,
-            FOREIGN KEY(categoria_id) REFERENCES categorias(id),
-            FOREIGN KEY(subcategoria_id) REFERENCES subcategorias(id)
-        )
-    """)
-
-    # 5) PEDIDOS
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS pedidos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            etapa TEXT,
-            numero_pedido TEXT,
-            fecha TEXT,
-            fecha_entrega_propuesta TEXT,
-            fecha_entrega_real TEXT,
-            motivo_retraso TEXT,
-            canal TEXT,
-            oc TEXT,
-            doc_venta TEXT,
-            cliente TEXT,
-            descripcion TEXT,
-            importe REAL,
-            gasto REAL
-        )
-    """)
-
-    # Crear tabla ingresos
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS ingresos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pedido_id INTEGER,
-            monto REAL,
-            forma_pago TEXT,
-            fecha TEXT,
-            depositado INTEGER DEFAULT 0,
-            FOREIGN KEY(pedido_id) REFERENCES pedidos(id)
-        )
-    """)
-
-    conn.commit()
-
-    # 7) Sembrar categorías/subcategorías de ejemplo si están vacías
-    #    (solo si no hay ninguna)
-    c.execute("SELECT COUNT(*) FROM categorias")
-    if (c.fetchone() or [0])[0] == 0:
-        c.executemany("INSERT INTO categorias (tipo, nombre) VALUES (?, ?)", [
-            ("ingreso", "Ventas"),
-            ("ingreso", "Servicios"),
-            ("egreso", "Transporte"),
-            ("egreso", "Insumos"),
-        ])
-        conn.commit()
-
-    c.execute("SELECT COUNT(*) FROM subcategorias")
-    if (c.fetchone() or [0])[0] == 0:
-        # Asumimos IDs 1..4 en el orden insertado arriba
-        c.executemany("INSERT INTO subcategorias (categoria_id, nombre) VALUES (?, ?)", [
-            (1, "Venta en tienda"),
-            (1, "Venta online"),
-            (3, "Gasolina"),
-            (3, "Mantenimiento"),
-        ])
-        conn.commit()
-
-    conn.close()
-
-    # 8) Migraciones y usuario admin (cada función abre/cierra su propia conexión)
-    ensure_user_columns()
-    ensure_admin_user()
-
 
 # -------------------- MIGRACIÓN SUAVE DE USUARIOS --------------------
 def ensure_user_columns():
