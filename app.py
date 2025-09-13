@@ -23,6 +23,7 @@ def init_db():
 # Ejecutar inicialización
 init_db()
 
+
 # -------------------- MIGRACIÓN SUAVE DE USUARIOS --------------------
 def ensure_user_columns():
     """Añade a 'usuarios' las columnas que falten y normaliza valores nulos."""
@@ -57,42 +58,22 @@ def ensure_user_columns():
 
 # -------------------- ADMIN POR DEFECTO --------------------
 def ensure_admin_user():
-    """Crea o normaliza el usuario Administrador (pass 1812) con todos los permisos."""
+    """Crea un usuario admin por defecto si no existe."""
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-
-    c.execute("SELECT id, password FROM usuarios WHERE username=?", ("Administrador",))
-    row = c.fetchone()
-
-    if row is None:
+    c.execute("SELECT id FROM usuarios WHERE username = ?", ("Administrador",))
+    if not c.fetchone():
         c.execute("""
-            INSERT INTO usuarios (username, password, is_admin,
-                                  mod_pedidos, mod_movimientos, mod_admin, mod_usuarios)
+            INSERT INTO usuarios (username, password, is_admin, mod_pedidos, mod_movimientos, mod_admin, mod_usuarios)
             VALUES (?, ?, 1, 1, 1, 1, 1)
         """, ("Administrador", "1812"))
-    else:
-        # Si existe, asegura permisos; conserva contraseña si ya tiene una
-        c.execute("""
-            UPDATE usuarios
-            SET password = CASE WHEN password IS NULL OR password='' THEN '1812' ELSE password END,
-                is_admin = 1,
-                mod_pedidos = 1,
-                mod_movimientos = 1,
-                mod_admin = 1,
-                mod_usuarios = 1
-            WHERE username = ?
-        """, ("Administrador",))
-
-    conn.commit()
+        conn.commit()
     conn.close()
 
+# Ejecutar migraciones y admin inicial
+ensure_user_columns()
+ensure_admin_user()
 
-# Llamar al inicio del programa
-init_db()
-
-# (Opcional: si prefieres, puedes llamar a estas dos aquí, pero ya se invocan dentro de init_db)
-# ensure_user_columns()
-# ensure_admin_user()
 
 
 # -------------------- LOGIN --------------------
