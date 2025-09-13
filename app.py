@@ -16,6 +16,7 @@ app.secret_key = "tu_clave_supersecreta"  # Cambia esto por una clave más segur
 # -------------------- INIT DB (crea tablas y siembra ejemplos) --------------------
 def init_db():
     with sqlite3.connect(DB_NAME) as conn:
+        c = conn.cursor()
         with open("schema.sql", "r") as f:
             conn.executescript(f.read())
     print("✅ Base de datos inicializada con schema.sql")
