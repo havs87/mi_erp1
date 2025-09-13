@@ -1,24 +1,27 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import sqlite3
 from datetime import date
-
 import os
 
-if os.path.exists("erp.db"):
-    os.remove("erp.db")
+DB_NAME = "mi_erp.db"
+
+# ⚠️ Solo para pruebas en Render: borra la base cada vez que arranca
+if os.path.exists(DB_NAME):
+    os.remove(DB_NAME)
     print("⚠️ Base de datos eliminada y se regenerará desde schema.sql")
 
-
-DB_NAME = "mi_erp.db"
 app = Flask(__name__)
 app.secret_key = "tu_clave_supersecreta"  # Cambia esto por una clave más segura en producción
 
-DB_NAME = "mi_erp.db"
-
 # -------------------- INIT DB (crea tablas y siembra ejemplos) --------------------
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
+    with sqlite3.connect(DB_NAME) as conn:
+        with open("schema.sql", "r") as f:
+            conn.executescript(f.read())
+    print("✅ Base de datos inicializada con schema.sql")
+
+# Inicializar DB al arrancar
+init_db()
 
     # 1) USUARIOS (estructura mínima; columnas extra se añaden con ensure_user_columns)
     c.execute("""
